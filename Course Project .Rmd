@@ -1,0 +1,108 @@
+---
+title: "Course Project"
+author: "Mayank Pandit"
+date: "2025-06-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+
+activity <- read.csv("activity.csv")
+activity$date <- as.Date(activity$date)
+```
+
+```{r}
+
+total_steps_per_day <- activity %>%
+  group_by(date) %>%
+  summarize(total_steps = sum(steps, na.rm = TRUE))
+
+
+hist(total_steps_per_day$total_steps,
+     main = "Total Steps Per Day",
+     xlab = "Steps",
+     col = "skyblue",
+     breaks = 20)
+
+
+mean_steps <- mean(total_steps_per_day$total_steps, na.rm = TRUE)
+median_steps <- median(total_steps_per_day$total_steps, na.rm = TRUE)
+mean_steps
+median_steps
+```
+
+```{r}
+
+average_interval <- activity %>%
+  group_by(interval) %>%
+  summarize(mean_steps = mean(steps, na.rm = TRUE))
+
+
+plot(average_interval$interval, average_interval$mean_steps, type = "l",
+     main = "Average Daily Activity Pattern",
+     xlab = "5-minute Interval",
+     ylab = "Average Number of Steps")
+```
+
+```{r}
+
+max_interval <- average_interval[which.max(average_interval$mean_steps), ]
+max_interval
+```
+
+```{r}
+
+sum(is.na(activity$steps))
+
+
+activity_filled <- activity %>%
+  left_join(average_interval, by = "interval") %>%
+  mutate(steps = ifelse(is.na(steps), mean_steps, steps)) %>%
+  select(steps, date, interval)
+```
+
+```{r}
+
+total_steps_filled <- activity_filled %>%
+  group_by(date) %>%
+  summarize(total_steps = sum(steps))
+
+
+hist(total_steps_filled$total_steps,
+     main = "Total Steps Per Day (After Imputation)",
+     xlab = "Steps",
+     col = "salmon",
+     breaks = 20)
+
+
+mean_filled <- mean(total_steps_filled$total_steps)
+median_filled <- median(total_steps_filled$total_steps)
+mean_filled
+median_filled
+```
+
+```{r}
+
+activity_filled$day_type <- ifelse(weekdays(activity_filled$date) %in% c("Saturday", "Sunday"),
+                                   "Weekend", "Weekday")
+
+
+avg_by_daytype <- activity_filled %>%
+  group_by(interval, day_type) %>%
+  summarize(mean_steps = mean(steps), .groups = "drop")
+
+
+ggplot(avg_by_daytype, aes(x = interval, y = mean_steps)) +
+  geom_line() +
+  facet_wrap(~day_type, nrow = 2) +
+  labs(title = "Activity Patterns: Weekdays vs Weekends",
+       x = "Interval", y = "Average Steps")
+```
+
+
